@@ -1,0 +1,38 @@
+{
+  "name": "ai-city-brain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SimCity-style 3D dashboard where an AI brain coordinates city departments during incidents.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "verify": "esbuild scripts/verify-sim.ts --bundle --format=esm --platform=node --alias:@=./src --outfile=node_modules/.cache/verify-sim.mjs --log-level=warning && node node_modules/.cache/verify-sim.mjs",
+    "verify:ui": "esbuild scripts/verify-ui.tsx --bundle --format=esm --platform=node --alias:@=./src --jsx=automatic --packages=external --outfile=node_modules/.cache/verify-ui.mjs --log-level=warning && node node_modules/.cache/verify-ui.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
+    "@react-three/postprocessing": "^3.2.0",
+    "framer-motion": "^14.2.0",
+    "postprocessing": "^6.39.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "three": "^0.186.1",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "esbuild": "^0.28.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

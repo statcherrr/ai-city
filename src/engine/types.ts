@@ -115,8 +115,6 @@ export interface ScenarioTimeline {
   keywords: string[];
   /** Camera focus when the scenario starts. */
   focus: Point;
-  /** Only the snowstorm scenario activates the plow fleet. */
-  activatesPlows?: boolean;
   events: ScenarioEvent[];
 }
 

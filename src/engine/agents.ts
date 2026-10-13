@@ -83,14 +83,6 @@ export function axisOf(a: NodeId, b: NodeId): Axis {
   return nodeJ(a) === nodeJ(b) ? 'ew' : 'ns';
 }
 
-/** Right-hand-side vector for a travel direction, in world space. */
-function laneVector(from: NodeId, to: NodeId): { x: number; z: number } {
-  const dx = Math.sign(nodeI(to) - nodeI(from));
-  const dz = Math.sign(nodeJ(to) - nodeJ(from));
-  // Rotating the heading by +90 degrees on the x/z plane.
-  return { x: -dz, z: dx };
-}
-
 export class Fleet {
   readonly agents: Agent[] = [];
   readonly byKind: Record<AgentKind, Agent[]> = {
@@ -422,9 +414,13 @@ export class Fleet {
     const bx = worldX(nodeI(to));
     const bz = worldZ(nodeJ(to));
     const t = Math.min(1, Math.max(0, agent.progress));
-    const lane = laneVector(from, to);
-    agent.x = ax + (bx - ax) * t + lane.x * agent.laneOffset;
-    agent.z = az + (bz - az) * t + lane.z * agent.laneOffset;
+    // Right-hand lane offset, inlined: the travel direction rotated +90 degrees
+    // on the x/z plane. This runs for every vehicle every step, so it must not
+    // build a vector object.
+    const dx = Math.sign(nodeI(to) - nodeI(from));
+    const dz = Math.sign(nodeJ(to) - nodeJ(from));
+    agent.x = ax + (bx - ax) * t - dz * agent.laneOffset;
+    agent.z = az + (bz - az) * t + dx * agent.laneOffset;
     agent.heading = Math.atan2(bx - ax, bz - az);
   }
 }

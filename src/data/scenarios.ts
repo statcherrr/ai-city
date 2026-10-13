@@ -370,7 +370,6 @@ const SNOWSTORM: ScenarioTimeline = {
     'chains',
   ],
   focus: p(10, 10),
-  activatesPlows: true,
   events: [
     {
       t: 0,

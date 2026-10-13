@@ -10,9 +10,10 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pngStats } from './png-stats.mjs';
 
 const url = process.argv[2] ?? 'http://localhost:5199/?scenario=water-main&advance=14&speed=4';
 const scenarioId = new URL(url).searchParams.get('scenario') ?? 'water-main';
@@ -156,6 +157,21 @@ try {
   check('cross-department actions are tagged', has(first, 'cross-dept'));
   for (const needle of expected.must) check(`shows "${needle}"`, has(first, needle));
   check('the clock is advancing', /T\+\d/.test(second), second.match(/T\+[\d.]+m/)?.[0] ?? '');
+
+  console.log('\n=== 3D scene (screenshot pixels) ===');
+  const shot = await client.send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('/tmp/city-check.png', Buffer.from(shot.data, 'base64'));
+  const stats = pngStats(shot.data);
+  console.log(
+    `  frame ${stats.width}x${stats.height} · mean luma ${stats.meanLuminance.toFixed(1)} · ` +
+      `std dev ${stats.luminanceStdDev.toFixed(1)} · peak ${stats.maxLuminance.toFixed(0)} · ` +
+      `${(stats.brightRatio * 100).toFixed(2)}% bright · ${stats.sampledColors} sampled colours`,
+  );
+  check('the frame is not blank', stats.luminanceStdDev > 6, `std dev ${stats.luminanceStdDev.toFixed(2)}`);
+  check('the city is lit', stats.brightRatio > 0.002, `${(stats.brightRatio * 100).toFixed(3)}% bright pixels`);
+  check('neon highlights blow out', stats.maxLuminance > 180, `peak ${stats.maxLuminance.toFixed(0)}`);
+  check('the skyline has depth', stats.sampledColors > 400, `${stats.sampledColors} colours`);
+  check('the city band is darker than the lit panels', stats.cityMeanLuminance < stats.meanLuminance * 2.2);
 
   console.log('\n=== Advancing over real time ===');
   check('the view updates while running', first !== second);

@@ -59,6 +59,14 @@ export interface MetricSet {
   transitDelayMin: number;
 }
 
+/** One-shot response-time delta shown in the Before/After toggle. */
+export interface ResponseDelta {
+  responseTimeMin: number | null;
+  resolutionMin: number | null;
+  coordinatedActions: number;
+  responseUnit: string;
+}
+
 export type Effect =
   | {
       kind: 'incident';

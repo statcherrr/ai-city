@@ -25,6 +25,7 @@ import type {
   Incident,
   MetricSet,
   Point,
+  ResponseDelta,
   RunSummary,
   ScenarioId,
   ScenarioTimeline,
@@ -62,6 +63,7 @@ export interface EngineSnapshot {
   progress: number;
   scores: Scores;
   metrics: MetricSet;
+  comparisonDelta: ResponseDelta | null;
   incidents: Incident[];
   detours: Detour[];
   corridors: Corridor[];
@@ -249,6 +251,7 @@ export class CityEngine {
       progress: nominal ? 0 : Math.min(1, world.timeMin / sim.totalMin),
       scores: { ...world.scores },
       metrics: { ...world.metrics },
+      comparisonDelta: nominal || !sim.scenario.id ? null : this.computeComparisonDelta(sim.scenario.id),
       incidents: world.incidents.map((incident) => ({ ...incident })),
       detours: world.detours.map((detour) => ({ ...detour })),
       corridors: world.corridors.map((corridor) => ({ ...corridor })),
@@ -268,6 +271,24 @@ export class CityEngine {
       incidentCenter: world.incidents[0]?.point ?? null,
       focusToken: this.focusToken,
       focus: this.focus,
+    };
+  }
+
+  /** Compute the response-time delta between the two modes for the current scenario. */
+  private computeComparisonDelta(scenarioId: ScenarioId): ResponseDelta {
+    const scenario = SCENARIO_BY_ID.get(scenarioId);
+    if (!scenario) return { responseTimeMin: null, resolutionMin: null, coordinatedActions: 0, responseUnit: 'min' };
+    const c = runHeadless(this.city, scenario, 'coordinated');
+    const s = runHeadless(this.city, scenario, 'siloed');
+    return {
+      responseTimeMin: c.metrics.responseTimeMin !== null && s.metrics.responseTimeMin !== null
+        ? s.metrics.responseTimeMin - c.metrics.responseTimeMin
+        : null,
+      resolutionMin: c.metrics.resolutionMin !== null && s.metrics.resolutionMin !== null
+        ? s.metrics.resolutionMin - c.metrics.resolutionMin
+        : null,
+      coordinatedActions: c.metrics.coordinatedActions - s.metrics.coordinatedActions,
+      responseUnit: 'min',
     };
   }
 

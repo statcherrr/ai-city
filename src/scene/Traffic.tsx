@@ -27,12 +27,12 @@ interface VehicleSpec {
 }
 
 const VEHICLES: Record<AgentKind, VehicleSpec> = {
-  car: { size: [1.15, 0.62, 2.3], color: [0.3, 0.35, 0.44], headlight: 1.9, lift: 0.16 },
-  bus: { size: [1.75, 2.05, 4.6], color: [0.36, 0.3, 0.54], headlight: 2.6, lift: 0.42 },
-  'fire-truck': { size: [1.85, 2.15, 4.4], color: [0.56, 0.18, 0.15], bar: 'fire', headlight: 2.6, lift: 0.18 },
-  plow: { size: [1.9, 1.65, 3.9], color: [0.6, 0.45, 0.15], bar: 'plow', headlight: 2.4, lift: 0.18 },
-  police: { size: [1.2, 0.68, 2.4], color: [0.17, 0.26, 0.5], bar: 'police', headlight: 2.1, lift: 0.16 },
-  utility: { size: [1.6, 1.9, 3.8], color: [0.32, 0.38, 0.43], bar: 'plow', headlight: 2.4, lift: 0.18 },
+  car: { size: [1.05, 0.55, 2.1], color: [0.26, 0.3, 0.36], headlight: 1.6, lift: 0.14 },
+  bus: { size: [1.6, 1.9, 4.2], color: [0.32, 0.26, 0.46], headlight: 2.2, lift: 0.38 },
+  'fire-truck': { size: [1.7, 2.0, 4.0], color: [0.42, 0.14, 0.11], bar: 'fire', headlight: 2.2, lift: 0.16 },
+  plow: { size: [1.75, 1.5, 3.5], color: [0.5, 0.38, 0.12], bar: 'plow', headlight: 2.0, lift: 0.16 },
+  police: { size: [1.1, 0.6, 2.2], color: [0.14, 0.22, 0.42], bar: 'police', headlight: 1.8, lift: 0.14 },
+  utility: { size: [1.45, 1.75, 3.4], color: [0.28, 0.33, 0.38], bar: 'plow', headlight: 2.0, lift: 0.16 },
 };
 
 /** Per-instance tint spread, so the traffic is not one flat colour. */
@@ -120,8 +120,8 @@ export function Agents(): React.JSX.Element {
 
       const forwardX = Math.sin(agent.heading);
       const forwardZ = Math.cos(agent.heading);
-      const poolLength = length * spec.headlight * 0.55;
-      const reach = length * 0.5 + poolLength * 0.3;
+      const poolLength = length * spec.headlight * 0.5;
+      const reach = length * 0.5 + poolLength * 0.25;
       writeInstance(
         poolMesh,
         i * 2,
@@ -129,7 +129,7 @@ export function Agents(): React.JSX.Element {
         0.14,
         agent.z + forwardZ * reach,
         agent.heading,
-        width * 1.25,
+        width * 1.2,
         1,
         poolLength,
       );
@@ -140,13 +140,13 @@ export function Agents(): React.JSX.Element {
         0.14,
         agent.z - forwardZ * reach,
         agent.heading,
-        width * 1.05,
+        width * 1.0,
         1,
-        poolLength * 0.5,
+        poolLength * 0.4,
       );
     }
 
-    // Emergency light bars strobe; values above 1 make them bloom.
+    // Emergency light bars strobe; only those exceed bloom.
     for (let index = 0; index < emergencyAgents.length; index++) {
       const agent = emergencyAgents[index]!;
       const spec = VEHICLES[agent.kind];
@@ -161,14 +161,14 @@ export function Agents(): React.JSX.Element {
         height + spec.lift + 0.12,
         agent.z,
         agent.heading,
-        width * 0.62,
-        0.16,
-        length * 0.48,
+        width * 0.58,
+        0.14,
+        length * 0.44,
       );
-      if (spec.bar === 'fire') writeInstanceColor(barMesh, index, intensity * 1.6, intensity * 0.32, intensity * 0.22);
+      if (spec.bar === 'fire') writeInstanceColor(barMesh, index, intensity * 1.4, intensity * 0.28, intensity * 0.18);
       else if (spec.bar === 'police')
-        writeInstanceColor(barMesh, index, intensity * 0.4, intensity * 0.52, intensity * 1.7);
-      else writeInstanceColor(barMesh, index, intensity * 1.5, intensity * 1.02, intensity * 0.2);
+        writeInstanceColor(barMesh, index, intensity * 0.35, intensity * 0.46, intensity * 1.5);
+      else writeInstanceColor(barMesh, index, intensity * 1.35, intensity * 0.92, intensity * 0.16);
     }
 
     bodyMesh.instanceMatrix.needsUpdate = true;
@@ -191,9 +191,9 @@ export function Agents(): React.JSX.Element {
 }
 
 const SIGNAL_RGB: [number, number, number][] = [
-  [2.6, 0.28, 0.32], // red
-  [2.7, 1.6, 0.2], // amber
-  [0.18, 2.5, 0.85], // green
+  [1.7, 0.18, 0.2], // red — blooms only, not overpowering
+  [1.9, 1.55, 0.12], // amber
+  [0.14, 2.4, 0.7], // green
 ];
 
 /** Two heads per signalled intersection: one per axis. */

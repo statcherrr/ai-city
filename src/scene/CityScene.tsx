@@ -27,10 +27,10 @@ function SimulationDriver(): null {
 function NightLights(): React.JSX.Element {
   return (
     <>
-      <ambientLight intensity={0.28} color="#44618f" />
-      <hemisphereLight args={['#1d2c49', '#04060b', 0.55]} />
-      <directionalLight position={[-70, 96, 52]} intensity={0.75} color="#a8c4ff" />
-      <directionalLight position={[64, 40, -58]} intensity={0.22} color="#ffb98a" />
+      <ambientLight intensity={0.22} color="#3a507a" />
+      <hemisphereLight args={['#1a2742', '#03060a', 0.5]} />
+      <directionalLight position={[-52, 120, 68]} intensity={0.5} color="#9fb8ff" />
+      <directionalLight position={[52, 60, -44]} intensity={0.14} color="#ffb98a" />
     </>
   );
 }
@@ -44,14 +44,14 @@ export function CityScene(): React.JSX.Element {
     <Canvas
       dpr={[1, 1.75]}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
-      camera={{ position: [104, 96, 104], fov: 38, near: 1, far: 800 }}
+      camera={{ position: [118, 104, 118], fov: 36, near: 1, far: 900 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
+        gl.toneMappingExposure = 0.95;
       }}
     >
       <color attach="background" args={[PALETTE.background]} />
-      <fog attach="fog" args={[PALETTE.fog, 120, 340]} />
+      <fog attach="fog" args={[PALETTE.fog, 95, 360]} />
 
       <NightLights />
       <Ground texture={groundTexture} />

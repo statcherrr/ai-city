@@ -176,10 +176,10 @@ function IncidentMarker({
       ring.current.scale.setScalar(pulse);
       (ring.current.material as THREE.MeshBasicMaterial).opacity = resolved
         ? 0.22
-        : 0.5 + 0.25 * Math.sin(t * 2.4);
+        : 0.28 + 0.14 * Math.sin(t * 2.2);
     }
     if (face.current) {
-      (face.current.material as THREE.MeshBasicMaterial).opacity = resolved ? 0.1 : 0.28 + 0.18 * Math.sin(t * 1.6);
+      (face.current.material as THREE.MeshBasicMaterial).opacity = resolved ? 0.06 : 0.16 + 0.1 * Math.sin(t * 1.5);
     }
   });
 

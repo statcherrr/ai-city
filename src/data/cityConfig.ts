@@ -13,10 +13,10 @@ export const BLOCK = 8;
 export const NODES_PER_SIDE = GRID_BLOCKS + 1;
 export const CITY_HALF = (GRID_BLOCKS * BLOCK) / 2;
 
-export const ROAD_WIDTH = 3.4;
+export const ROAD_WIDTH = 4.2;
 export const ROAD_LIFT = 0.06;
 /** Lateral offset that keeps vehicles on the right-hand side of the road. */
-export const LANE_OFFSET = 1.15;
+export const LANE_OFFSET = 1.4;
 
 /** Wall-clock time the shift starts at, in minutes past midnight. */
 export const START_CLOCK_MIN = 22 * 60 + 45;

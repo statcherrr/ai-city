@@ -1,35 +1,35 @@
 /**
  * Static city geometry. Everything here is generated once from the city layout
  * and poured into instanced meshes, so the whole city costs a handful of draw
- * calls and nothing in this file re-generates data per frame.
+ * calls and nothing in this file runs per frame.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html, Line } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
 import { BLOCK, GRID_BLOCKS, PALETTE, ROAD_LIFT, ROAD_WIDTH } from '@/data/cityConfig';
 import type { CityModel } from '@/engine/city';
 import { nodeI, nodeJ, worldX, worldZ } from '@/engine/graph';
 import type { CityVisuals } from './cityVisuals';
 import { writeInstance, writeInstanceColor } from './scratch';
 
-/** Building tint ramp, darkest to lightest. */
+/** Building tint ramp, all one restrained dark family. */
 const BUILDING_TINTS: [number, number, number][] = [
-  [0.07, 0.09, 0.13],
-  [0.09, 0.12, 0.17],
-  [0.12, 0.15, 0.21],
-  [0.15, 0.19, 0.26],
+  [0.11, 0.13, 0.17],
+  [0.09, 0.11, 0.15],
 ];
 
-/** Window tones above 1 bloom harder in the night pass. */
-const WARM_WINDOW: [number, number, number] = [1.55, 1.05, 0.55];
-const COOL_WINDOW: [number, number, number] = [0.7, 1.25, 1.7];
+/**
+ * Window tone: a cool paper so a few windows catch the bloom. The gain above 1
+ * is what lets incidents, signals, routes and lights bloom while the city stays
+ * dark.
+ */
+const WINDOW: [number, number, number] = [0.85, 1.35, 1.85];
 
 const WORLD_SPAN = GRID_BLOCKS * BLOCK;
 const GROUND_MARGIN = 140;
 
-/** Shared disposal helper: geometries and materials live for the app's lifetime. */
 function useDisposable(...objects: { dispose: () => void }[]): void {
   useEffect(() => {
     return () => {
@@ -42,7 +42,6 @@ function useDisposable(...objects: { dispose: () => void }[]): void {
 export function Ground({ texture }: { texture: THREE.CanvasTexture }): React.JSX.Element {
   const size = WORLD_SPAN + GROUND_MARGIN;
   useMemo(() => {
-    // The canvas covers exactly the city span; stretch it across the larger plane.
     const k = WORLD_SPAN / size;
     texture.repeat.set(1 / k, 1 / k);
     texture.offset.set(-(0.5 - k / 2) / k, -(0.5 - k / 2) / k);
@@ -54,10 +53,10 @@ export function Ground({ texture }: { texture: THREE.CanvasTexture }): React.JSX
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial
         map={texture}
+        color="#0a1018"
         emissiveMap={texture}
-        emissive="#8fb6ff"
-        emissiveIntensity={0.5}
-        color="#1a2231"
+        emissive="#44618f"
+        emissiveIntensity={0.18}
         roughness={0.95}
         metalness={0.05}
       />
@@ -76,10 +75,10 @@ export function River({ city }: { city: CityModel }): React.JSX.Element {
     () =>
       new THREE.MeshStandardMaterial({
         color: PALETTE.water,
-        roughness: 0.08,
-        metalness: 0.9,
-        emissive: new THREE.Color('#0d3550'),
-        emissiveIntensity: 0.7,
+        roughness: 0.1,
+        metalness: 0.85,
+        emissive: new THREE.Color('#071f30'),
+        emissiveIntensity: 0.45,
       }),
     [],
   );
@@ -121,12 +120,12 @@ export function Roads({ city }: { city: CityModel }): React.JSX.Element {
         roughness: 0.82,
         metalness: 0.12,
         emissive: new THREE.Color('#0c1220'),
-        emissiveIntensity: 0.85,
+        emissiveIntensity: 0.45,
       }),
     [],
   );
   const dashMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: '#5b7591', transparent: true, opacity: 0.45, toneMapped: false }),
+    () => new THREE.MeshBasicMaterial({ color: '#5b7591', transparent: true, opacity: 0.4, toneMapped: false }),
     [],
   );
   useDisposable(planeGeometry, roadMaterial, dashMaterial);
@@ -147,7 +146,6 @@ export function Roads({ city }: { city: CityModel }): React.JSX.Element {
       const lift = edge.bridge ? ROAD_LIFT + 1.1 : ROAD_LIFT;
       writeInstance(mesh, index, midX, lift, midZ, rotationY, BLOCK, ROAD_WIDTH, 1);
 
-      // Centre-line dashes, dimmer than the windows so the grid stays readable.
       const dirX = (bx - ax) / BLOCK;
       const dirZ = (bz - az) / BLOCK;
       for (let d = 0; d < 2; d++) {
@@ -185,13 +183,12 @@ export function Roads({ city }: { city: CityModel }): React.JSX.Element {
   );
 }
 
-/** Glowing rails on the river crossings. */
 function Bridges({ city }: { city: CityModel }): React.JSX.Element {
   const ref = useRef<THREE.InstancedMesh>(null);
   const bridgeEdges = useMemo(() => city.graph.edges.filter((edge) => edge.bridge), [city]);
   const geometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
   const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: '#3fd0ff', toneMapped: false, transparent: true, opacity: 0.7 }),
+    () => new THREE.MeshBasicMaterial({ color: '#5fb8ff', toneMapped: false, transparent: true, opacity: 0.55 }),
     [],
   );
   useDisposable(geometry, material);
@@ -207,7 +204,6 @@ function Bridges({ city }: { city: CityModel }): React.JSX.Element {
       const midX = (ax + bx) / 2;
       const midZ = (az + bz) / 2;
       const rotationY = edge.axis === 'ew' ? 0 : Math.PI / 2;
-      // Rails straddle the deck: offset across the road, not always along z.
       const acrossX = edge.axis === 'ew' ? 0 : ROAD_WIDTH / 2;
       const acrossZ = edge.axis === 'ew' ? ROAD_WIDTH / 2 : 0;
       const y = ROAD_LIFT + 1.45;
@@ -256,8 +252,7 @@ export function Windows({ visuals }: { visuals: CityVisuals }): React.JSX.Elemen
     if (!mesh) return;
     visuals.windows.forEach((window, index) => {
       writeInstance(mesh, index, window.x, window.y, window.z, window.rotationY, window.w, window.h, 1);
-      const tone = window.tone === 0 ? WARM_WINDOW : COOL_WINDOW;
-      writeInstanceColor(mesh, index, tone[0], tone[1], tone[2]);
+      writeInstanceColor(mesh, index, WINDOW[0], WINDOW[1], WINDOW[2]);
     });
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.instanceMatrix.needsUpdate = true;
@@ -288,8 +283,8 @@ export function Parks({ city, visuals }: { city: CityModel; visuals: CityVisuals
       new THREE.MeshStandardMaterial({
         color: PALETTE.park,
         roughness: 0.95,
-        emissive: new THREE.Color('#08281c'),
-        emissiveIntensity: 0.5,
+        emissive: new THREE.Color('#061810'),
+        emissiveIntensity: 0.2,
       }),
     [],
   );
@@ -301,10 +296,10 @@ export function Parks({ city, visuals }: { city: CityModel; visuals: CityVisuals
   const treeMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#123324',
+        color: '#0e2216',
         roughness: 0.9,
-        emissive: new THREE.Color('#0a2a1c'),
-        emissiveIntensity: 0.4,
+        emissive: new THREE.Color('#04110a'),
+        emissiveIntensity: 0.15,
       }),
     [],
   );
@@ -356,7 +351,6 @@ export function Parks({ city, visuals }: { city: CityModel; visuals: CityVisuals
 export function Landmarks({ city }: { city: CityModel }): React.JSX.Element {
   const beacons = useRef<THREE.InstancedMesh>(null);
   const beaconGeometry = useMemo(() => new THREE.SphereGeometry(0.42, 12, 12), []);
-  // One shared material for every rooftop beacon, pulsed from a single frame hook.
   const beaconMaterial = useMemo(
     () => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, toneMapped: false }),
     [],
@@ -390,21 +384,15 @@ export function Landmarks({ city }: { city: CityModel }): React.JSX.Element {
       {city.landmarks.map((landmark) => (
         <group key={landmark.id} position={[landmark.rect.x, 0, landmark.rect.z]}>
           <mesh position={[0, landmark.height / 2, 0]}>
-            <boxGeometry args={[5.4, landmark.height, 5.4]} />
-            <meshStandardMaterial color="#1d2736" roughness={0.6} metalness={0.3} />
+            <boxGeometry args={[5.0, landmark.height, 5.0]} />
+            <meshStandardMaterial color="#151b26" roughness={0.65} metalness={0.3} />
           </mesh>
-          {/* Roof trim in the department colour. */}
-          <mesh position={[0, landmark.height + 0.12, 0]}>
-            <boxGeometry args={[5.6, 0.28, 5.6]} />
+          <mesh position={[0, landmark.height + 0.1, 0]}>
+            <boxGeometry args={[5.2, 0.22, 5.2]} />
             <meshBasicMaterial color={landmark.color} toneMapped={false} />
           </mesh>
-          {/* Ground halo so the facility reads from far out. */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.09, 0]}>
-            <ringGeometry args={[3.6, 4.5, 48]} />
-            <meshBasicMaterial color={landmark.color} transparent opacity={0.3} toneMapped={false} />
-          </mesh>
-          <Html position={[0, landmark.height + 4.6, 0]} center distanceFactor={170} zIndexRange={[20, 0]}>
-            <div className="pointer-events-none whitespace-nowrap rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-[10px] font-medium tracking-wide text-white/75 backdrop-blur-sm">
+          <Html position={[0, landmark.height + 4.4, 0]} center distanceFactor={170} zIndexRange={[20, 0]}>
+            <div className="pointer-events-none whitespace-nowrap rounded-full border border-white/10 bg-black/55 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white/70 backdrop-blur-sm">
               {landmark.name}
             </div>
           </Html>

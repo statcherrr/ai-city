@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""Run the full ML pipeline end to end. Set REAL=1 to fetch live NYC data."""
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+# Make 'ml' importable when run from the project root or from ml/scripts/.
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+import pandas as pd
+import numpy as np
+
+import ml.src.config as cfg
+import ml.src.data as data
+import ml.src.segments as seg
+import ml.src.features as feat
+import ml.src.model as model
+import ml.src.export as export
+
+REAL = os.environ.get("REAL", "0") == "1"
+
+
+def week_starts_between(start: str, end: str, freq: str = "7D") -> pd.Series:
+    return pd.Series(pd.date_range(start, end, freq=freq))
+
+
+def main() -> int:
+    print("=== ML pipeline ===")
+    cfg.RAW.mkdir(parents=True, exist_ok=True)
+    cfg.OUT.mkdir(parents=True, exist_ok=True)
+
+    if REAL:
+        print("[1/5] Fetching live NYC datasets...")
+        c311 = data.fetch_311()
+        centerline = data.fetch_centerline()
+        weather = data.fetch_weather_daily()
+        traffic = data.fetch_traffic_counts()
+        print(f"  311 rows: {len(c311)}, centerline rows: {len(centerline)}, weather rows: {len(weather)}, traffic rows: {len(traffic)}")
+    else:
+        print("[1/5] REAL=0 — building a small deterministic surrogate dataset (fast, offline) ...")
+        c311 = pd.DataFrame([
+            {"unique_key":"k1","created_date":pd.Timestamp("2024-02-01"),"street_name":"BROADWAY","cross_street_1":"34 ST","cross_street_2":"35 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.985,40.753]}},
+            {"unique_key":"k2","created_date":pd.Timestamp("2024-02-10"),"street_name":"BROADWAY","cross_street_1":"42 ST","cross_street_2":"43 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.988,40.755]}},
+            {"unique_key":"k3","created_date":pd.Timestamp("2024-03-01"),"street_name":"7th Ave","cross_street_1":"34 ST","cross_street_2":"35 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.982,40.748]}},
+            {"unique_key":"k4","created_date":pd.Timestamp("2024-06-01"),"street_name":"Broadway","cross_street_1":"57 St","cross_street_2":"58 St","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.986,40.762]}},
+            {"unique_key":"k5","created_date":pd.Timestamp("2024-07-15"),"street_name":"BROADWAY","cross_street_1":"59 ST","cross_street_2":"60 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.987,40.764]}},
+            {"unique_key":"k6","created_date":pd.Timestamp("2024-08-01"),"street_name":"Park Ave","cross_street_1":"34 ST","cross_street_2":"35 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.972,40.748]}},
+            {"unique_key":"k7","created_date":pd.Timestamp("2024-09-01"),"street_name":"Lexington Ave","cross_street_1":"59 ST","cross_street_2":"60 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.970,40.764]}},
+        ])
+        centerline = pd.DataFrame([
+            {"physicalid":"S1","full_street_name":"BROADWAY","street_name":"BROADWAY","segmentlength":1200,"posted_speed":30,"number_total_lanes":4,"truck_route_type":"YES","the_geom":{"type":"MultiLineString","coordinates":[[[-73.99,40.748],[-73.985,40.755],[-73.98,40.758]]]}},
+            {"physicalid":"S2","full_street_name":"PARK AVE","street_name":"PARK AVE","segmentlength":800,"posted_speed":25,"number_total_lanes":2,"truck_route_type":"","the_geom":{"type":"MultiLineString","coordinates":[[[-73.976,40.746],[-73.972,40.748],[-73.968,40.750]]]}},
+            {"physicalid":"S3","full_street_name":"LEXINGTON AVE","street_name":"LEXINGTON AVE","segmentlength":1000,"posted_speed":30,"number_total_lanes":3,"truck_route_type":"","the_geom":{"type":"MultiLineString","coordinates":[[[-73.974,40.760],[-73.970,40.763],[-73.966,40.765]]]}},
+            {"physicalid":"S4","full_street_name":"7th AVENUE","street_name":"7th Ave","segmentlength":900,"posted_speed":30,"number_total_lanes":4,"truck_route_type":"YES","the_geom":{"type":"MultiLineString","coordinates":[[[-73.986,40.746],[-73.982,40.748],[-73.978,40.750]]]}},
+        ])
+        weather = pd.DataFrame({
+            "date": pd.date_range("2023-01-01", "2024-12-31"),
+            "temp_max": 5, "temp_min": -2, "precip": 0.1, "snow": 0.0,
+        })
+        traffic = pd.DataFrame({"segmentid":["S1"],"vol":[18000]})
+        print(f"  surrogate 311 rows: {len(c311)}, centerline rows: {len(centerline)}, weather rows: {len(weather)}")
+
+    print("[2/5] Building segment table from centerline...")
+    segments = seg.build_segments(centerline)
+    print(f"  segments built: {len(segments)}")
+
+    print("[3/5] Snapping 311 reports to segments...")
+    snapped_rows: list[dict] = []
+    unmatched = 0
+    for _, r in c311.iterrows():
+        lat = r.get("lat")
+        lon = r.get("lon")
+        street = r.get("street_name") or ""
+        s = seg.snap_report_to_segment(lat, lon, street, segments)
+        if s is None:
+            unmatched += 1
+            continue
+        row = {"created_date": r.get("created_date"), "segmentId": s["segmentId"], "street_name": street}
+        snapped_rows.append(row)
+    snapped = pd.DataFrame(snapped_rows)
+    print(f"  snapped reports: {len(snapped)}, unmatched: {unmatched}")
+    segments = seg.attach_cross_streets(segments, c311)
+
+    print("[4/5] Building feature matrix (time-based split, no leakage)...")
+    train_weeks = week_starts_between(cfg.TRAIN_START, cfg.TRAIN_END)
+    val_weeks = week_starts_between(cfg.VAL_START, cfg.VAL_END)
+    test_weeks = week_starts_between(cfg.TEST_START, cfg.TEST_END)
+    all_weeks = pd.concat([train_weeks, val_weeks, test_weeks], ignore_index=True)
+    if not REAL:
+        all_weeks = pd.Series(sorted(list(train_weeks[:3]) + list(val_weeks[:2]) + list(test_weeks[:2])))
+    print(f"  target weeks: {len(all_weeks)} (train {len(train_weeks)}, val {len(val_weeks)}, test {len(test_weeks)})")
+
+    X, y, weeks = feat.build_dataset(segments, snapped, weather, traffic, all_weeks)
+    print(f"  feature matrix: {X.shape}")
+
+    # Leakage check: reconstruct defect_count_30d per row and compare
+    leak_rows = 0
+    for idx, row in X.iterrows():
+        ws = row["week_start"]
+        seg_reps = snapped[(snapped["created_date"] >= ws - pd.Timedelta(days=30)) & (snapped["created_date"] < ws) & (snapped["segmentId"] == row["segmentId"])]
+        expected_c30 = len(seg_reps)
+        if expected_c30 != row["defect_count_30d"]:
+            leak_rows += 1
+            print(f"  LEAKAGE? row idx={idx} seg={row['segmentId']} week={ws.date()}: expected c30={expected_c30}, actual={row['defect_count_30d']}")
+    print(f"  leakage check: {leak_rows} mismatched rows (expect 0)")
+
+    train_mask = X["week_start"].isin(train_weeks)
+    val_mask = X["week_start"].isin(val_weeks)
+    test_mask = X["week_start"].isin(test_weeks)
+
+    def drop_meta(df):
+        return df.drop(columns=["segmentId","week_start"])
+
+    X_train, y_train = drop_meta(X[train_mask]), y[train_mask]
+    X_val, y_val = drop_meta(X[val_mask]), y[val_mask]
+    X_test, y_test = drop_meta(X[test_mask]), y[test_mask]
+
+    if len(X_train) > 0 and len(X_val) > 0:
+        b1_val_pr, b1_val_roc, _ = model.baseline_30d_count(X_train, y_train, X_val, y_val)
+        b2_val_pr, b2_val_roc, _ = model.baseline_historical_rate(X_train, y_train, X_val, y_val)
+        print(f"  baseline 30d count (val): PR-AUC={b1_val_pr:.3f}, ROC-AUC={b1_val_roc:.3f}")
+        print(f"  baseline historical rate (val): PR-AUC={b2_val_pr:.3f}, ROC-AUC={b2_val_roc:.3f}")
+    else:
+        b1_val_pr = b2_val_pr = b1_val_roc = b2_val_roc = float("nan")
+
+    if len(X_train) + len(X_val) > 0:
+        X_trainval = pd.concat([X_train, X_val])
+        y_trainval = pd.concat([y_train, y_val])
+    else:
+        X_trainval, y_trainval = X_train, y_train
+
+    if len(X_trainval) > 0 and len(X_test) > 0:
+        gb_model, val_metrics, feat_imp, val_probs = model.train_gradient_boosting(X_trainval, y_trainval, X_test, y_test, seed=cfg.SEED)
+        test_metrics, test_probs = model.evaluate_model(gb_model, X_test, y_test)
+        print(f"  GB (test): PR-AUC={test_metrics['pr_auc_test']:.3f}, ROC-AUC={test_metrics['roc_auc_test']:.3f}, recall@5%={test_metrics['recall_top_5pct_test']:.3f}, recall@10%={test_metrics['recall_top_10pct_test']:.3f}")
+        b1_test_pr, b1_test_roc, _ = model.baseline_30d_count(X_train, y_train, X_test, y_test) if len(X_train) > 0 else (float("nan"), float("nan"), None)
+        b2_test_pr, b2_test_roc, _ = model.baseline_historical_rate(X_train, y_train, X_test, y_test) if len(X_train) > 0 else (float("nan"), float("nan"), None)
+    else:
+        gb_model = None
+        test_metrics = {"pr_auc_test": float("nan"), "roc_auc_test": float("nan"), "recall_top_5pct_test": float("nan"), "recall_top_10pct_test": float("nan"), "calibration": []}
+        test_probs = pd.Series([0.5] * len(X_test)) if len(X_test) > 0 else pd.Series(dtype=float)
+        b1_test_pr = b1_test_roc = b2_test_pr = b2_test_roc = float("nan")
+
+    baseline_metrics = {
+        "baseline_30d_pr_auc_test": float(b1_test_pr),
+        "baseline_30d_roc_auc_test": float(b1_test_roc),
+        "baseline_rate_pr_auc_test": float(b2_test_pr),
+        "baseline_rate_roc_auc_test": float(b2_test_roc),
+    }
+
+    print("[5/5] Exporting risk_scores.json + model_card.md...")
+    if gb_model is not None and len(X_test) > 0:
+        feature_names = model.feature_names_from_model(gb_model)
+        out_json = export.export_risk_scores(
+            segments, gb_model, feature_names, test_probs, test_weeks, train_weeks, val_weeks,
+            test_metrics, baseline_metrics,
+        )
+        print(f"  risk_scores.json: {out_json} ({len(segments)} segments)")
+        out_card = export.export_model_card(test_metrics, baseline_metrics, feat_imp)
+        print(f"  model_card.md: {out_card}")
+    else:
+        print("  (skipped export — not enough data in this surrogate run)")
+
+    print(f"\n=== SEGMENT MATCHING SUMMARY ===")
+    print(f"  total 311 reports processed: {len(c311)}")
+    print(f"  snapped to a segment: {len(snapped)}")
+    print(f"  unmatched (no segment found): {unmatched}")
+    if len(segments) > 0:
+        print(f"  distinct segments in Midtown subset: {len(segments)}")
+
+    if (cfg.OUT / "risk_scores.json").exists():
+        size_bytes = (cfg.OUT / "risk_scores.json").stat().st_size
+        print(f"  risk_scores.json size: {size_bytes} bytes ({size_bytes/1024:.1f} KB) — target < 2MB")
+        if size_bytes > 2_000_000:
+            print("  WARNING: exceeds 2MB target")
+
+    print("\n=== pipeline complete ===")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

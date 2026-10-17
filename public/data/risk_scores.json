@@ -1,0 +1,196 @@
+{
+  "metadata": {
+    "modelVersion": "1.0.0",
+    "trainedOn": "2026-10-17T00:25:27.130724+00:00",
+    "dateRange": {
+      "train": [
+        "2020-01-01",
+        "2023-12-27"
+      ],
+      "validate": [
+        "2024-01-01",
+        "2024-06-24"
+      ],
+      "test": [
+        "2024-07-01",
+        "2024-12-30"
+      ]
+    },
+    "metrics": {
+      "pr_auc_test": 0.375,
+      "roc_auc_test": 0.5,
+      "recall_top_5pct_test": 1.0,
+      "recall_top_10pct_test": 1.0,
+      "calibration": [
+        {
+          "bin_low": 0.375,
+          "bin_high": 0.046933703073953496,
+          "frac_pos": 0.375,
+          "mean_pred": 0.046933703073953496
+        }
+      ]
+    },
+    "baselines": {
+      "baseline_30d_pr_auc_test": 0.375,
+      "baseline_30d_roc_auc_test": 0.5,
+      "baseline_rate_pr_auc_test": 0.9166666666666666,
+      "baseline_rate_roc_auc_test": 0.9666666666666667
+    },
+    "seed": 42,
+    "disclaimer": "Likelihood of reported defects (311 pothole/street-condition complaints) in the next 30 days. Reporting proxy; not true defect incidence. See model_card.md for limitations."
+  },
+  "segments": [
+    {
+      "segmentId": "S1",
+      "streetName": "BROADWAY",
+      "fromCross": "",
+      "toCross": "",
+      "centroid": {
+        "lat": 40.753,
+        "lon": -73.985
+      },
+      "polyline": [
+        [
+          -73.99,
+          40.748
+        ],
+        [
+          -73.98,
+          40.758
+        ]
+      ],
+      "riskScore": 0.0469,
+      "topFactors": [
+        {
+          "feature": "defect_count_30d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_90d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_365d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        }
+      ]
+    },
+    {
+      "segmentId": "S2",
+      "streetName": "PARK AVE",
+      "fromCross": "",
+      "toCross": "",
+      "centroid": {
+        "lat": 40.748000000000005,
+        "lon": -73.97200000000001
+      },
+      "polyline": [
+        [
+          -73.976,
+          40.746
+        ],
+        [
+          -73.968,
+          40.75
+        ]
+      ],
+      "riskScore": 0.0469,
+      "topFactors": [
+        {
+          "feature": "defect_count_30d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_90d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_365d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        }
+      ]
+    },
+    {
+      "segmentId": "S3",
+      "streetName": "LEXINGTON AVE",
+      "fromCross": "",
+      "toCross": "",
+      "centroid": {
+        "lat": 40.7625,
+        "lon": -73.97
+      },
+      "polyline": [
+        [
+          -73.974,
+          40.76
+        ],
+        [
+          -73.966,
+          40.765
+        ]
+      ],
+      "riskScore": 0.0469,
+      "topFactors": [
+        {
+          "feature": "defect_count_30d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_90d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_365d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        }
+      ]
+    },
+    {
+      "segmentId": "S4",
+      "streetName": "7TH AVENUE",
+      "fromCross": "",
+      "toCross": "",
+      "centroid": {
+        "lat": 40.748000000000005,
+        "lon": -73.982
+      },
+      "polyline": [
+        [
+          -73.986,
+          40.746
+        ],
+        [
+          -73.978,
+          40.75
+        ]
+      ],
+      "riskScore": 0.0469,
+      "topFactors": [
+        {
+          "feature": "defect_count_30d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_90d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        },
+        {
+          "feature": "defect_count_365d",
+          "importance": 0.0,
+          "note": "global importance 0.0"
+        }
+      ]
+    }
+  ]
+}

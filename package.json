@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "verify": "esbuild scripts/verify-sim.ts --bundle --format=esm --platform=node --alias:@=./src --outfile=node_modules/.cache/verify-sim.mjs --log-level=warning && node node_modules/.cache/verify-sim.mjs",
-    "verify:ui": "esbuild scripts/verify-ui.tsx --bundle --format=esm --platform=node --alias:@=./src --jsx=automatic --packages=external --outfile=node_modules/.cache/verify-ui.mjs --log-level=warning && node node_modules/.cache/verify-ui.mjs"
+    "verify:ui": "esbuild scripts/verify-ui.tsx --bundle --format=esm --platform=node --alias:@=./src --jsx=automatic --packages=external --outfile=node_modules/.cache/verify-ui.mjs --log-level=warning && node node_modules/.cache/verify-ui.mjs",
+    "test": "vitest"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -24,6 +25,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
@@ -31,8 +33,10 @@
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.2",
     "esbuild": "^0.28.2",
+    "playwright": "^1.64.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

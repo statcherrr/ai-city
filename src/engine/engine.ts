@@ -16,6 +16,7 @@
 import { CITY_SEED, DISTRICT_NAME, FIXED_STEP_MIN, SIM_MIN_PER_REAL_SECOND } from '@/data/cityConfig';
 import { SCENARIO_BY_ID } from '@/data/scenarios';
 import { signalNodeIds, generateCity, type CityModel } from './city';
+import { matchAllRiskSegments, type RiskMatchResult } from '@/engine/riskMatch';
 import { Fleet, type FleetState } from './agents';
 import { Simulation, runHeadless } from './sim';
 import type {
@@ -73,6 +74,7 @@ export interface EngineSnapshot {
   /** Bumped whenever the camera should fly somewhere new. */
   focusToken: number;
   focus: Point | null;
+  riskMatches: readonly RiskMatchResult[];
 }
 
 export interface EngineUpdate {
@@ -119,13 +121,15 @@ export class CityEngine {
   private focus: Point | null = null;
   private readonly baselineFleet: FleetState;
   private readonly listeners = new Set<(update: EngineUpdate) => void>();
-  private readonly comparisonCache = new Map<ScenarioId, Comparison>();
+  private readonly comparisonCache = new Map<ScenarioId, Comparison>;
+  readonly riskMatches: readonly RiskMatchResult[];
 
   constructor() {
     this.city = generateCity(this.seed);
     this.fleet = new Fleet(this.city, signalNodeIds(), this.seed);
     this.baselineFleet = this.fleet.saveState();
     this.nominalSim = this.createNominal();
+    this.riskMatches = this.computeRiskMatches();
   }
 
   subscribe(listener: (update: EngineUpdate) => void): () => void {
@@ -271,6 +275,7 @@ export class CityEngine {
       incidentCenter: world.incidents[0]?.point ?? null,
       focusToken: this.focusToken,
       focus: this.focus,
+      riskMatches: this.riskMatches,
     };
   }
 
@@ -315,6 +320,19 @@ export class CityEngine {
       fleet: this.fleet,
       durationMin: Number.POSITIVE_INFINITY,
     });
+  }
+
+  private computeRiskMatches(): RiskMatchResult[] {
+    try {
+      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('risk_scores') : null;
+      const { segments } = stored ? JSON.parse(stored) : { segments: [] };
+      if (!segments || !Array.isArray(segments)) return [];
+      const graphEdges = this.city.graph.edges;
+      if (!graphEdges) return [];
+      return matchAllRiskSegments(segments, graphEdges);
+    } catch {
+      return [];
+    }
   }
 
   private publish(feed: readonly FeedItem[], finished: RunSummary | null): void {

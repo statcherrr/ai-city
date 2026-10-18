@@ -11,9 +11,9 @@ import os
 import sys
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 import pandas as pd
 import numpy as np
@@ -25,7 +25,7 @@ import ml.src.features as feat
 import ml.src.model as model
 import ml.src.export as export
 
-REAL = os.environ.get("REAL", "0") == "1"
+REAL = True
 
 
 def week_starts_between(start: str, end: str, freq: str = "7D") -> pd.Series:
@@ -38,36 +38,18 @@ def main() -> int:
     cfg.OUT.mkdir(parents=True, exist_ok=True)
 
     # [1/5] Data
-    if REAL:
-        print("[1/5] Fetching live NYC datasets...")
+    print("[1/5] Fetching live NYC datasets...")
+    try:
         c311 = data.fetch_311()
         centerline = data.fetch_centerline()
         weather = data.fetch_weather_daily()
         traffic = data.fetch_traffic_counts()
-        print(f"  311 rows: {len(c311)}, centerline rows: {len(centerline)}, weather rows: {len(weather)}, traffic rows: {len(traffic)}")
-    else:
-        print("[1/5] REAL=0 — building a small deterministic surrogate dataset (fast, offline) ...")
-        c311 = pd.DataFrame([
-            {"unique_key":"k1","created_date":pd.Timestamp("2024-02-01"),"street_name":"BROADWAY","cross_street_1":"34 ST","cross_street_2":"35 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.985,40.753]}},
-            {"unique_key":"k2","created_date":pd.Timestamp("2024-02-10"),"street_name":"BROADWAY","cross_street_1":"42 ST","cross_street_2":"43 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.988,40.755]}},
-            {"unique_key":"k3","created_date":pd.Timestamp("2024-03-01"),"street_name":"7th Ave","cross_street_1":"34 ST","cross_street_2":"35 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.982,40.748]}},
-            {"unique_key":"k4","created_date":pd.Timestamp("2024-06-01"),"street_name":"Broadway","cross_street_1":"57 St","cross_street_2":"58 St","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.986,40.762]}},
-            {"unique_key":"k5","created_date":pd.Timestamp("2024-07-15"),"street_name":"BROADWAY","cross_street_1":"59 St","cross_street_2":"60 ST","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.987,40.764]}},
-            {"unique_key":"k6","created_date":pd.Timestamp("2024-08-01"),"street_name":"Park Ave","cross_street_1":"34 St","cross_street_2":"35 St","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.972,40.748]}},
-            {"unique_key":"k7","created_date":pd.Timestamp("2024-09-01"),"street_name":"Lexington Ave","cross_street_1":"59 St","cross_street_2":"60 St","address_type":"ADDRESS","location":{"type":"Point","coordinates":[-73.970,40.764]}},
-        ])
-        centerline = pd.DataFrame([
-            {"physicalid":"S1","full_street_name":"BROADWAY","street_name":"BROADWAY","segmentlength":1200,"posted_speed":30,"number_total_lanes":4,"truck_route_type":"YES","the_geom":{"type":"MultiLineString","coordinates":[[[-73.99,40.748],[-73.985,40.755],[-73.98,40.758]]]}},
-            {"physicalid":"S2","full_street_name":"PARK AVE","street_name":"PARK AVE","segmentlength":800,"posted_speed":25,"number_total_lanes":2,"truck_route_type":"","the_geom":{"type":"MultiLineString","coordinates":[[[-73.976,40.746],[-73.972,40.748],[-73.968,40.750]]]}},
-            {"physicalid":"S3","full_street_name":"LEXINGTON AVE","street_name":"LEXINGTON AVE","segmentlength":1000,"posted_speed":30,"number_total_lanes":3,"truck_route_type":"","the_geom":{"type":"MultiLineString","coordinates":[[[-73.974,40.760],[-73.970,40.763],[-73.966,40.765]]]}},
-            {"physicalid":"S4","full_street_name":"7th AVENUE","street_name":"7th Ave","segmentlength":900,"posted_speed":30,"number_total_lanes":4,"truck_route_type":"YES","the_geom":{"type":"MultiLineString","coordinates":[[[-73.986,40.746],[-73.982,40.748],[-73.978,40.750]]]}},
-        ])
-        weather = pd.DataFrame({
-            "date": pd.date_range("2023-01-01", "2024-12-31"),
-            "temp_max": 5, "temp_min": -2, "precip": 0.1, "snow": 0.0,
-        })
-        traffic = pd.DataFrame({"segmentid":["S1"],"vol":[18000]})
-        print(f"  surrogate 311 rows: {len(c311)}, centerline rows: {len(centerline)}, weather rows: {len(weather)}")
+    except Exception as e:
+        print(f"ERROR: Failed to fetch real data: {e}", file=sys.stderr)
+        raise
+    if len(c311) == 0 or len(centerline) == 0:
+        raise RuntimeError(f"Real data missing: c311={len(c311)}, centerline={len(centerline)}")
+    print(f"  311 rows: {len(c311)}, centerline rows: {len(centerline)}, weather rows: {len(weather)}, traffic rows: {len(traffic)}")
 
     # [2/5] Segments
     print("[2/5] Building segment table from centerline...")
@@ -97,10 +79,7 @@ def main() -> int:
     train_weeks = week_starts_between(cfg.TRAIN_START, cfg.TRAIN_END)
     val_weeks = week_starts_between(cfg.VAL_START, cfg.VAL_END)
     test_weeks = week_starts_between(cfg.TEST_START, cfg.TEST_END)
-    if not REAL:
-        all_weeks = pd.Series(sorted(set(list(train_weeks[:3].tolist()) + list(val_weeks[:2].tolist()) + list(test_weeks[:2].tolist()))))
-    else:
-        all_weeks = pd.concat([train_weeks, val_weeks, test_weeks], ignore_index=True)
+    all_weeks = pd.concat([train_weeks, val_weeks, test_weeks], ignore_index=True)
     print(f"  target weeks: {len(all_weeks)} (train {len(train_weeks)}, val {len(val_weeks)}, test {len(test_weeks)})")
 
     X, y, _weeks = feat.build_dataset(segments, snapped, weather, traffic, all_weeks)

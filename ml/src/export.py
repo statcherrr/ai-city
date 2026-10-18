@@ -90,6 +90,8 @@ def export_risk_scores(
             "baselines": baseline_metrics,
             "seed": SEED,
             "disclaimer": "Likelihood of reported defects (311 pothole/street-condition complaints) in the next 30 days. Reporting proxy; not true defect incidence. See model_card.md for limitations.",
+            "real": True,
+            "segmentsCount": len(rows),
         },
         "segments": rows,
     }

@@ -164,6 +164,8 @@ export interface Dispatch {
   corridorId: string | null;
 }
 
+import type { Rationale } from './decision';
+
 export interface FeedItem {
   id: number;
   t: number;
@@ -174,6 +176,7 @@ export interface FeedItem {
   coordination: boolean;
   scenario: ScenarioId;
   mode: SimMode;
+  rationale?: Rationale;
 }
 
 export interface Corridor {

@@ -75,6 +75,7 @@ export interface EngineSnapshot {
   focusToken: number;
   focus: Point | null;
   riskMatches: readonly RiskMatchResult[];
+  riskDataIllustrative: boolean;
 }
 
 export interface EngineUpdate {
@@ -123,13 +124,16 @@ export class CityEngine {
   private readonly listeners = new Set<(update: EngineUpdate) => void>();
   private readonly comparisonCache = new Map<ScenarioId, Comparison>;
   readonly riskMatches: readonly RiskMatchResult[];
+  readonly riskDataIllustrative: boolean;
 
   constructor() {
     this.city = generateCity(this.seed);
     this.fleet = new Fleet(this.city, signalNodeIds(), this.seed);
     this.baselineFleet = this.fleet.saveState();
     this.nominalSim = this.createNominal();
-    this.riskMatches = this.computeRiskMatches();
+    const riskResult = this.computeRiskMatches();
+    this.riskMatches = riskResult.matches;
+    this.riskDataIllustrative = riskResult.illustrative;
   }
 
   subscribe(listener: (update: EngineUpdate) => void): () => void {
@@ -276,6 +280,7 @@ export class CityEngine {
       focusToken: this.focusToken,
       focus: this.focus,
       riskMatches: this.riskMatches,
+      riskDataIllustrative: this.riskDataIllustrative,
     };
   }
 
@@ -322,16 +327,22 @@ export class CityEngine {
     });
   }
 
-  private computeRiskMatches(): RiskMatchResult[] {
+  private computeRiskMatches(): { matches: RiskMatchResult[]; illustrative: boolean } {
     try {
       const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('risk_scores') : null;
-      const { segments } = stored ? JSON.parse(stored) : { segments: [] };
-      if (!segments || !Array.isArray(segments)) return [];
+      if (!stored) return { matches: [], illustrative: true };
+      const parsed = JSON.parse(stored);
+      const segments = parsed.segments;
+      const metadata = parsed.metadata || {};
+      const segmentsCount = metadata.segmentsCount ?? (Array.isArray(segments) ? segments.length : 0);
+      const real = metadata.real !== false;
+      const illustrative = !real || segmentsCount < 500;
+      if (!segments || !Array.isArray(segments)) return { matches: [], illustrative };
       const graphEdges = this.city.graph.edges;
-      if (!graphEdges) return [];
-      return matchAllRiskSegments(segments, graphEdges);
+      if (!graphEdges) return { matches: [], illustrative };
+      return { matches: matchAllRiskSegments(segments, graphEdges), illustrative };
     } catch {
-      return [];
+      return { matches: [], illustrative: true };
     }
   }
 

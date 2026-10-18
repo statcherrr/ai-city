@@ -10,12 +10,25 @@
  *   - What metric deltas drove the decision
  */
 
+import type { Department } from './types';
 
+export interface Signal {
+  id: string;
+  department: Department;
+  description: string;
+  priority: number;
+}
+
+export interface IsolationContext {
+  mode: 'coordinated' | 'siloed';
+  department?: Department; // for siloed mode, only see own signals
+  crossDepartmentDelays?: Partial<Record<Department, number>>; // delays in minutes for cross-dept notifications in siloed mode
+}
 
 /** A candidate action with full decision metadata. */
 export interface CandidateAction {
   id: string;
-  department: string[];
+  department: Department[];
   estimatedResponseTimeDelta: number; // minutes saved/reduced
   peopleAffected: number;
   vehiclesAffected: number;
@@ -73,7 +86,7 @@ export function scoreCandidate(
  */
 export function selectBest(
   candidates: CandidateAction[],
-  weights: ScoringWeights
+  weights: ScoringWeights = DEFAULT_SCORING_WEIGHTS
 ): SelectionResult {
   if (candidates.length === 0) {
     return { chosen: null as any, rejected: [] };
@@ -117,6 +130,40 @@ export function buildRationale(
       costDelta: chosen.cost,
     },
   };
+}
+
+export function getVisibleSignals(signals: Signal[], context: IsolationContext): Signal[] {
+  if (context.mode === 'coordinated') {
+    return signals.slice();
+  }
+  if (context.mode === 'siloed' && context.department) {
+    return signals.filter((s) => s.department === context.department);
+  }
+  return signals.slice();
+}
+
+export function generateCandidateActions(
+  signals: Signal[],
+  context: IsolationContext = { mode: 'coordinated' }
+): CandidateAction[] {
+  const visible = getVisibleSignals(signals, context);
+  if (visible.length === 0) {
+    return [];
+  }
+  const candidates: CandidateAction[] = [];
+  for (let i = 0; i < visible.length && i < 5; i++) {
+    const signal = visible[i]!;
+    candidates.push({
+      id: `candidate-${signal.id}-${i}`,
+      department: [signal.department],
+      estimatedResponseTimeDelta: Math.max(0, 10 - signal.priority * 2),
+      peopleAffected: signal.priority * 20,
+      vehiclesAffected: signal.priority * 10,
+      cost: signal.priority * 100,
+      confidence: 0.8,
+    });
+  }
+  return candidates;
 }
 
 /** Default scoring weights (can be overridden from config). */

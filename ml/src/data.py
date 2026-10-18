@@ -110,6 +110,7 @@ def fetch_weather_daily() -> pd.DataFrame:
     if cache.exists():
         return pd.read_parquet(cache)
     import urllib.parse
+    from .config import WEATHER_LAT, WEATHER_LON
     params = {
         "latitude": str(WEATHER_LAT),
         "longitude": str(WEATHER_LON),

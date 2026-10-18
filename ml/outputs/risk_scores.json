@@ -1,196 +1,767 @@
 {
   "metadata": {
     "modelVersion": "1.0.0",
-    "trainedOn": "2026-10-17T00:25:27.130724+00:00",
+    "trainedOn": "2026-10-17T22:01:16.840514+00:00",
     "dateRange": {
       "train": [
         "2020-01-01",
-        "2023-12-27"
+        "2023-12-31"
       ],
       "validate": [
         "2024-01-01",
-        "2024-06-24"
+        "2024-06-30"
       ],
       "test": [
         "2024-07-01",
-        "2024-12-30"
+        "2024-12-31"
       ]
     },
     "metrics": {
-      "pr_auc_test": 0.375,
-      "roc_auc_test": 0.5,
-      "recall_top_5pct_test": 1.0,
-      "recall_top_10pct_test": 1.0,
-      "calibration": [
-        {
-          "bin_low": 0.375,
-          "bin_high": 0.046933703073953496,
-          "frac_pos": 0.375,
-          "mean_pred": 0.046933703073953496
-        }
-      ]
+      "n": 4416,
+      "y_rate": 0.0231,
+      "acc": 0.67867,
+      "roc_auc": 0.81043,
+      "pr_auc": 0.13962,
+      "precision": 0.04928,
+      "recall": 0.70588,
+      "f1": 0.09213,
+      "tp": 72,
+      "fp": 1389,
+      "fn": 30,
+      "tn": 2925
     },
     "baselines": {
-      "baseline_30d_pr_auc_test": 0.375,
+      "baseline_30d_pr_auc_test": 0.0231,
       "baseline_30d_roc_auc_test": 0.5,
-      "baseline_rate_pr_auc_test": 0.9166666666666666,
-      "baseline_rate_roc_auc_test": 0.9666666666666667
+      "baseline_rate_pr_auc_test": 0.0231,
+      "baseline_rate_roc_auc_test": 0.5
     },
     "seed": 42,
-    "disclaimer": "Likelihood of reported defects (311 pothole/street-condition complaints) in the next 30 days. Reporting proxy; not true defect incidence. See model_card.md for limitations."
+    "disclaimer": "Likelihood of a 311 pothole/street-condition complaint on a segment in the next day (label = at least one complaint that day). Derived from NYC Open Data 311; reporting proxy, not true defect incidence. See limitations below.",
+    "segmentsCount": 24,
+    "segmentIds": [
+      "125554",
+      "129691",
+      "130250",
+      "166777",
+      "166790",
+      "178637",
+      "178677",
+      "183887",
+      "189895",
+      "189905",
+      "189912",
+      "194980",
+      "194981",
+      "196892",
+      "196897",
+      "201314",
+      "201589",
+      "201591",
+      "201882",
+      "56463",
+      "57830",
+      "61717",
+      "90314",
+      "95179"
+    ]
   },
   "segments": [
     {
-      "segmentId": "S1",
-      "streetName": "BROADWAY",
+      "segmentId": "125554",
+      "streetName": "",
       "fromCross": "",
       "toCross": "",
-      "centroid": {
-        "lat": 40.753,
-        "lon": -73.985
-      },
-      "polyline": [
-        [
-          -73.99,
-          40.748
-        ],
-        [
-          -73.98,
-          40.758
-        ]
-      ],
-      "riskScore": 0.0469,
+      "riskScore": 0.70529,
       "topFactors": [
         {
-          "feature": "defect_count_30d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
         },
         {
-          "feature": "defect_count_90d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
         },
         {
-          "feature": "defect_count_365d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
         }
-      ]
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
     },
     {
-      "segmentId": "S2",
-      "streetName": "PARK AVE",
+      "segmentId": "129691",
+      "streetName": "",
       "fromCross": "",
       "toCross": "",
-      "centroid": {
-        "lat": 40.748000000000005,
-        "lon": -73.97200000000001
-      },
-      "polyline": [
-        [
-          -73.976,
-          40.746
-        ],
-        [
-          -73.968,
-          40.75
-        ]
-      ],
-      "riskScore": 0.0469,
+      "riskScore": 0.70529,
       "topFactors": [
         {
-          "feature": "defect_count_30d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
         },
         {
-          "feature": "defect_count_90d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
         },
         {
-          "feature": "defect_count_365d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
         }
-      ]
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
     },
     {
-      "segmentId": "S3",
-      "streetName": "LEXINGTON AVE",
+      "segmentId": "130250",
+      "streetName": "",
       "fromCross": "",
       "toCross": "",
-      "centroid": {
-        "lat": 40.7625,
-        "lon": -73.97
-      },
-      "polyline": [
-        [
-          -73.974,
-          40.76
-        ],
-        [
-          -73.966,
-          40.765
-        ]
-      ],
-      "riskScore": 0.0469,
+      "riskScore": 0.70529,
       "topFactors": [
         {
-          "feature": "defect_count_30d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
         },
         {
-          "feature": "defect_count_90d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
         },
         {
-          "feature": "defect_count_365d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
         }
-      ]
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
     },
     {
-      "segmentId": "S4",
-      "streetName": "7TH AVENUE",
+      "segmentId": "166777",
+      "streetName": "",
       "fromCross": "",
       "toCross": "",
-      "centroid": {
-        "lat": 40.748000000000005,
-        "lon": -73.982
-      },
-      "polyline": [
-        [
-          -73.986,
-          40.746
-        ],
-        [
-          -73.978,
-          40.75
-        ]
-      ],
-      "riskScore": 0.0469,
+      "riskScore": 0.73455,
       "topFactors": [
         {
-          "feature": "defect_count_30d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
         },
         {
-          "feature": "defect_count_90d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
         },
         {
-          "feature": "defect_count_365d",
-          "importance": 0.0,
-          "note": "global importance 0.0"
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
         }
-      ]
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "166790",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.49169,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "178637",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.39216,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "178677",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.63049,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "183887",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.2613,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "189895",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.69553,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "189905",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.70529,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "189912",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.25965,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "194980",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.41909,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "194981",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.45817,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "196892",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.27281,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "196897",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.37198,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "201314",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.29404,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "201589",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.38975,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "201591",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.41909,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "201882",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.39026,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "56463",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.42162,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "57830",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.14783,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "61717",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.12499,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "90314",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.11897,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
+    },
+    {
+      "segmentId": "95179",
+      "streetName": "",
+      "fromCross": "",
+      "toCross": "",
+      "riskScore": 0.06692,
+      "topFactors": [
+        {
+          "feature": "seg_length_ft",
+          "importance": 0.5720873755083026,
+          "note": " MDI importance 0.572"
+        },
+        {
+          "feature": "seg_lanes",
+          "importance": 0.09744318582993661,
+          "note": " MDI importance 0.097"
+        },
+        {
+          "feature": "seg_class_local",
+          "importance": 0.08479659257138615,
+          "note": " MDI importance 0.085"
+        }
+      ],
+      "centroid": {
+        "lat": 0,
+        "lon": 0
+      },
+      "polyline": []
     }
   ]
 }

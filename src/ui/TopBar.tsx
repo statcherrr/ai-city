@@ -25,6 +25,11 @@ export function TopBar({ snapshot }: { snapshot: EngineSnapshot }): React.JSX.El
             <span className="rounded-md bg-white/8 px-1.5 py-0.5 text-[8.5px] font-semibold tracking-[0.12em] text-white/40 uppercase">
               {snapshot.district}
             </span>
+            {snapshot.riskDataIllustrative && (
+              <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[8.5px] font-semibold tracking-[0.12em] text-amber-300 uppercase">
+                Illustrative data
+              </span>
+            )}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/40">
             <span className={`h-1.5 w-1.5 rounded-full ${running ? 'live-dot bg-emerald-400' : 'bg-white/25'}`} />

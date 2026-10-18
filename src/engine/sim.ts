@@ -18,6 +18,15 @@ import { Fleet, type FleetContext } from './agents';
 import { edgeKey, nodeI, nodeJ, pointToId, type Axis, type NodeId } from './graph';
 import { easeScores, easeTowards, targetScores } from './scoring';
 import { applyGreenWaves, signalColor } from './signals';
+import {
+  buildRationale,
+  generateCandidateActions,
+  selectBest,
+  type CandidateAction,
+  type IsolationContext,
+  type Rationale,
+  type Signal,
+} from './decision';
 import type {
   Corridor,
   Effect,
@@ -265,6 +274,38 @@ export class Simulation {
   }
 
   private startIncident(effect: Extract<Effect, { kind: 'incident' }>, event: ScenarioEvent): void {
+    const signals: Signal[] = [
+      {
+        id: `incident-${effect.id}`,
+        department: event.department,
+        description: `New incident: ${effect.label}`,
+        priority: 5,
+      },
+    ];
+
+    const isolationContext: IsolationContext = {
+      mode: this.mode,
+      department: this.mode === 'siloed' ? event.department : undefined,
+    };
+
+    const candidates = generateCandidateActions(signals, isolationContext);
+    const selected = selectBest(candidates.length > 0 ? candidates : [
+      {
+        id: `incident-response-${effect.id}`,
+        department: [event.department],
+        estimatedResponseTimeDelta: 8,
+        peopleAffected: 150,
+        vehiclesAffected: 80,
+        cost: 600,
+        confidence: 0.8,
+      },
+    ]);
+    const rationale = buildRationale(
+      signals.map((s) => s.description),
+      selected.chosen,
+      selected.rejected
+    );
+
     const incident: Incident = {
       id: effect.id,
       type: effect.type,
@@ -274,24 +315,54 @@ export class Simulation {
       startedAt: this.world.timeMin,
       resolveAt: this.world.timeMin + effect.resolveAt,
       resolved: false,
-      // The same event lands harder on a city that cannot coordinate.
       severity: effect.severity * (this.mode === 'siloed' ? SILOED_IMPACT_MULTIPLIER : 1),
     };
     this.world.incidents.push(incident);
-    this.log(event, event.action, `${effect.severity}/10 severity · ${DISTRICT_NAME}`);
+    this.log(event, event.action, `${effect.severity}/10 severity · ${DISTRICT_NAME}`, rationale);
   }
 
   private resolveIncident(id: string, event: ScenarioEvent): void {
+    const signals: Signal[] = [
+      {
+        id: `resolve-${id}`,
+        department: event.department,
+        description: `Resolve incident ${id}`,
+        priority: 4,
+      },
+    ];
+
+    const isolationContext: IsolationContext = {
+      mode: this.mode,
+      department: this.mode === 'siloed' ? event.department : undefined,
+    };
+
+    const candidates = generateCandidateActions(signals, isolationContext);
+    const selected = selectBest(candidates.length > 0 ? candidates : [
+      {
+        id: `resolve-fallback-${id}`,
+        department: [event.department],
+        estimatedResponseTimeDelta: 12,
+        peopleAffected: 100,
+        vehiclesAffected: 60,
+        cost: 400,
+        confidence: 0.8,
+      },
+    ]);
+    const rationale = buildRationale(
+      signals.map((s) => s.description),
+      selected.chosen,
+      selected.rejected
+    );
+
     const incident = this.world.incidents.find((i) => i.id === id);
     if (incident) incident.resolved = true;
     if (this.world.metrics.resolutionMin === null && this.incidentStartMin !== null) {
       this.world.metrics.resolutionMin = this.world.timeMin - this.incidentStartMin;
     }
-    // The incident closes out: streets reopen and transit returns to normal.
     for (const detour of this.world.detours) detour.reopened = true;
     this.world.closures.clear();
     this.world.activeReroutes = 0;
-    this.log(event, event.action, `Resolved ${this.world.timeMin.toFixed(0)} min after the call`);
+    this.log(event, event.action, `Resolved ${this.world.timeMin.toFixed(0)} min after the call`, rationale);
   }
 
   private closeRoute(
@@ -300,6 +371,46 @@ export class Simulation {
     blocked: { i: number; j: number }[],
     event: ScenarioEvent,
   ): void {
+    const signals: Signal[] = [
+      {
+        id: `reroute-${id}`,
+        department: event.department,
+        description: `Reroute required: ${label}`,
+        priority: 4,
+      },
+    ];
+    if (this.world.incidents.length > 0) {
+      signals.push({
+        id: `incident-for-reroute-${this.world.incidents[0]?.id}`,
+        department: event.department,
+        description: 'Incident blocks route',
+        priority: 5,
+      });
+    }
+
+    const isolationContext: IsolationContext = {
+      mode: this.mode,
+      department: this.mode === 'siloed' ? event.department : undefined,
+    };
+
+    const candidates = generateCandidateActions(signals, isolationContext);
+    const selected = selectBest(candidates.length > 0 ? candidates : [
+      {
+        id: `reroute-fallback-${id}`,
+        department: [event.department],
+        estimatedResponseTimeDelta: 15,
+        peopleAffected: 200,
+        vehiclesAffected: 150,
+        cost: 800,
+        confidence: 0.75,
+      },
+    ]);
+    const rationale = buildRationale(
+      signals.map((s) => s.description),
+      selected.chosen,
+      selected.rejected
+    );
+
     const nodes = blocked.map(pointToId);
     for (let k = 0; k + 1 < nodes.length; k++) {
       this.world.closures.add(edgeKey(nodes[k]!, nodes[k + 1]!));
@@ -319,6 +430,7 @@ export class Simulation {
       event,
       event.action,
       `${nodes.length} blocks closed · detour ${Math.max(0, reroute.length - 1)} blocks`,
+      rationale,
     );
   }
 
@@ -327,6 +439,47 @@ export class Simulation {
     const from = pointToId(effect.from);
     const to = pointToId(effect.to);
     const processing = DISPATCH_PROCESSING_MIN[this.mode];
+
+    // Generate signals from current state
+    const signals: Signal[] = [
+      {
+        id: `dispatch-${effect.id}`,
+        department: effect.department,
+        description: `Dispatch request: ${effect.label}`,
+        priority: 3,
+      },
+    ];
+    if (this.world.incidents.length > 0) {
+      signals.push({
+        id: `incident-active-${this.world.incidents[0]?.id}`,
+        department: effect.department,
+        description: 'Active incident requiring response',
+        priority: 5,
+      });
+    }
+
+    const isolationContext: IsolationContext = {
+      mode: this.mode,
+      department: this.mode === 'siloed' ? event.department : undefined,
+    };
+
+    const candidates = generateCandidateActions(signals, isolationContext);
+    const selected = selectBest(candidates.length > 0 ? candidates : [
+      {
+        id: `dispatch-fallback-${effect.id}`,
+        department: [effect.department],
+        estimatedResponseTimeDelta: 10,
+        peopleAffected: 100,
+        vehiclesAffected: 50,
+        cost: 500,
+        confidence: 0.7,
+      },
+    ]);
+    const rationale = buildRationale(
+      signals.map((s) => s.description),
+      selected.chosen,
+      selected.rejected
+    );
 
     let agentId: number | null = null;
     let travelMin = 0;
@@ -340,21 +493,17 @@ export class Simulation {
     } else {
       const agent = this.fleet.dispatch(vehicle, to, from);
       agentId = agent?.id ?? null;
-      // Travel time is measured from where the unit actually sits, not from the
-      // requested origin — the dispatcher's ETA is only as good as its tracking.
       const start = agent?.path[agent.leg];
       travelMin =
         start === undefined ? 0 : this.city.router.distance(start, to, this.routeOptions) / AGENT_SPEED[vehicle];
     }
 
     if (agentId === null) {
-      this.log(event, event.action, 'No unit available — request queued');
+      this.log(event, event.action, 'No unit available — request queued', rationale);
       return;
     }
 
     const agent = this.fleet.agent(agentId);
-    // Processing time models how long the unit sits before rolling. The brain's
-    // version is always out of the door first.
     if (agent) agent.dwell = processing;
 
     const etaMin = processing + travelMin;
@@ -370,7 +519,7 @@ export class Simulation {
       arrivedAt: null,
       corridorId: effect.corridor ?? null,
     });
-    this.log(event, event.action, `ETA ${etaMin.toFixed(1)} min · ${UNITS[effect.unit].label}`);
+    this.log(event, event.action, `ETA ${etaMin.toFixed(1)} min · ${UNITS[effect.unit].label}`, rationale);
   }
 
   private preemptSignals(
@@ -380,8 +529,51 @@ export class Simulation {
     to: { i: number; j: number },
     event: ScenarioEvent,
   ): void {
+    const signals: Signal[] = [
+      {
+        id: `signal-${id}`,
+        department: event.department,
+        description: `Signal preemption: ${label}`,
+        priority: 4,
+      },
+    ];
+    if (this.world.incidents.length > 0) {
+      signals.push({
+        id: `incident-for-signal-${this.world.incidents[0]?.id}`,
+        department: event.department,
+        description: 'Route clearance needed for emergency response',
+        priority: 5,
+      });
+    }
+
+    const isolationContext: IsolationContext = {
+      mode: this.mode,
+      department: this.mode === 'siloed' ? event.department : undefined,
+    };
+
+    const candidates = generateCandidateActions(signals, isolationContext);
+    const selected = selectBest(candidates.length > 0 ? candidates : [
+      {
+        id: `signal-fallback-${id}`,
+        department: [event.department],
+        estimatedResponseTimeDelta: 5,
+        peopleAffected: 50,
+        vehiclesAffected: 80,
+        cost: 300,
+        confidence: 0.7,
+      },
+    ]);
+    const rationale = buildRationale(
+      signals.map((s) => s.description),
+      selected.chosen,
+      selected.rejected
+    );
+
     const path = this.plan(pointToId(from), pointToId(to));
-    if (path.length < 2) return;
+    if (path.length < 2) {
+      this.log(event, event.action, 'No valid path for signal preemption', rationale);
+      return;
+    }
     this.world.greenWaves.push({
       id,
       label,
@@ -389,7 +581,7 @@ export class Simulation {
       startedAt: this.world.timeMin,
       durationMin: 6,
     });
-    this.log(event, event.action, `${path.length - 1} intersections pre-empted`);
+    this.log(event, event.action, `${path.length - 1} intersections pre-empted`, rationale);
   }
 
   /** Attribute unit arrivals to dispatches, and advance corridor clearing. */
@@ -461,12 +653,13 @@ export class Simulation {
     }
   }
 
-  private log(event: ScenarioEvent, action: string, detail: string): void {
+  private log(event: ScenarioEvent, action: string, detail: string, rationale?: Rationale): void {
     this.push({
       department: event.department,
       action,
       detail,
       coordination: event.coordination === true,
+      rationale,
     });
   }
 
@@ -475,7 +668,27 @@ export class Simulation {
     action: string;
     detail: string;
     coordination: boolean;
+    rationale?: Rationale;
   }): void {
+    const rationale = item.rationale ?? {
+      signalsObserved: [item.action],
+      chosenAction: {
+        id: `default-${item.action}`,
+        department: [item.department],
+        estimatedResponseTimeDelta: 0,
+        peopleAffected: 0,
+        vehiclesAffected: 0,
+        cost: 0,
+        confidence: 0.7,
+      } as any,
+      alternativesRejected: [],
+      metricDeltas: {
+        responseTimeDelta: 0,
+        peopleAffected: 0,
+        vehiclesAffected: 0,
+        costDelta: 0,
+      },
+    };
     this.feed.push({
       id: this.feedSeq++,
       t: this.world.timeMin,
@@ -485,6 +698,7 @@ export class Simulation {
       scenario: this.scenario.id,
       mode: this.mode,
       coordination: item.coordination,
+      rationale,
     });
   }
 }

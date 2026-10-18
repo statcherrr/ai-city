@@ -118,21 +118,45 @@ function FeedRow({ item }: FeedRowProps): React.JSX.Element {
 
           {/* Detail — hidden behind expand */}
           <AnimatePresence initial={false}>
-            {expanded && item.detail ? (
-              <motion.p
+            {expanded ? (
+              <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="mt-1 overflow-hidden text-[10.5px] leading-relaxed text-white/35"
+                className="mt-1 overflow-hidden text-[10.5px] leading-relaxed text-white/35 space-y-1"
               >
-                {item.detail}
-              </motion.p>
+                {item.detail && <p>{item.detail}</p>}
+                {item.rationale && (
+                  <div className="mt-2 rounded border border-white/10 bg-white/[0.02] p-2 text-[9.5px]">
+                    <div className="font-semibold text-white/60 mb-1">Rationale</div>
+                    <div className="space-y-1">
+                      <div><span className="text-white/50">Signals:</span> {item.rationale.signalsObserved.join(', ') || 'n/a'}</div>
+                      <div><span className="text-white/50">Chosen:</span> {item.rationale.chosenAction?.id || 'n/a'} (score based on metrics)</div>
+                      {item.rationale.alternativesRejected && item.rationale.alternativesRejected.length > 0 && (
+                        <div>
+                          <span className="text-white/50">Rejected:</span>
+                          <ul className="ml-2">
+                            {item.rationale.alternativesRejected.map((alt, idx) => (
+                              <li key={idx}>• {alt.action?.id}: score {alt.score?.toFixed(2)}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {item.rationale.metricDeltas && (
+                        <div>
+                          <span className="text-white/50">Metric deltas:</span> resp={item.rationale.metricDeltas.responseTimeDelta}m, people={item.rationale.metricDeltas.peopleAffected}, veh={item.rationale.metricDeltas.vehiclesAffected}, cost={item.rationale.metricDeltas.costDelta}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
             ) : null}
           </AnimatePresence>
 
           {/* Expand affordance */}
-          {item.detail && (
+          {(item.detail || item.rationale) && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}

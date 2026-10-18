@@ -31,13 +31,22 @@ function fmt(value: number | null, unit = '', digits = 1): string {
 
 let failures = 0;
 
+const BASELINE_VALUES: Record<string, Record<'coordinated' | 'siloed', { responseTimeMin: number | null; resolutionMin: number | null; coordinatedActions: number }>> = {
+  parade: {
+    coordinated: { responseTimeMin: 2.5, resolutionMin: 30.0, coordinatedActions: 5 },
+    siloed: { responseTimeMin: 6.1, resolutionMin: 36.0, coordinatedActions: 0 },
+  },
+};
+
 for (const scenario of SCENARIOS) {
   console.log(`\n=== ${scenario.id} — ${scenario.name} ===`);
   const results: Record<SimMode, RunSummary> = {} as Record<SimMode, RunSummary>;
+  const newResults: Array<any> = [];
   for (const mode of modes) {
     const summary = run(scenario.id, mode);
     results[mode] = summary;
     const m = summary.metrics;
+    newResults.push({ mode, m, feedLen: summary.feed.length });
     console.log(
       [
         `  ${mode.padEnd(12)}`,
@@ -49,6 +58,21 @@ for (const scenario of SCENARIOS) {
         `| feed ${summary.feed.length}`,
       ].join(' '),
     );
+  }
+  const baseline = BASELINE_VALUES[scenario.id];
+  if (baseline) {
+    console.log(`\n  --- Before/After (pipeline vs hardcoded baseline) ---`);
+    for (const mode of modes) {
+      const nr = newResults.find((r) => r.mode === mode);
+      const b = baseline[mode];
+      if (nr && b) {
+        console.log(
+          `    ${mode.padEnd(12)} response: ${fmt(b.responseTimeMin)}m -> ${fmt(nr.m.responseTimeMin)}m | ` +
+            `resolved: ${fmt(b.resolutionMin)}m -> ${fmt(nr.m.resolutionMin)}m | ` +
+            `actions: ${b.coordinatedActions} -> ${nr.m.coordinatedActions}`
+        );
+      }
+    }
   }
 
   const fast = results.coordinated.metrics;

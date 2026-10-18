@@ -1,0 +1,8 @@
+{
+  "feature_rows": 2305,
+  "segments_in_features": 24,
+  "weather_null_temp": 0,
+  "weather_null_precip": 0,
+  "weather_filtered_rows": 0,
+  "missing_seg": 0
+}

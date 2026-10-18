@@ -4,3 +4,8 @@ dist-ssr
 *.local
 .DS_Store
 .vite
+
+ml/.venv/
+ml/data/raw/
+ml/outputs/*.parquet
+ml/outputs/*.joblib

@@ -27,10 +27,10 @@ TEST_END = "2024-12-31"
 # Midtown subset bounds (lat/lon): 34th St to 59th St, river to river.
 # 34th St ≈ 40.748, 59th St ≈ 40.779. River-to-river: lon roughly -74.02 to -73.97.
 MIDTOWN = {
-    "lat_min": 40.745,
-    "lat_max": 40.782,
-    "lon_min": -74.025,
-    "lon_max": -73.965,
+    "lat_min": 40.610,
+    "lat_max": 40.780,
+    "lon_min": -74.030,
+    "lon_max": -73.960,
 }
 
 # Weather grid point (Open-Meteo Midtown proxy).

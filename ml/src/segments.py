@@ -36,6 +36,20 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * R * math.asin(math.sqrt(a))
 
 
+def haversine_series(lat1: float, lon1: float, lat2_arr, lon2_arr):
+    """Vectorized haversine distance from a point to arrays of points."""
+    import numpy as np
+
+    R = 6371000.0
+    phi1 = math.radians(lat1)
+    phi2_arr = np.radians(np.array(lat2_arr, dtype=float))
+    dphi_arr = np.radians(np.array(lat2_arr, dtype=float) - lat1)
+    dlambda_arr = np.radians(np.array(lon2_arr, dtype=float) - lon1)
+    a = np.sin(dphi_arr / 2) ** 2 + math.cos(phi1) * np.cos(phi2_arr) * np.sin(dlambda_arr / 2) ** 2
+    c = 2 * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
+    return R * c
+
+
 def parse_point(geom: Any) -> Optional[tuple[float, float]]:
     """Extract (lon, lat) from a GeoJSON Point or MultiPoint first coordinate."""
     if not isinstance(geom, dict):
@@ -51,12 +65,33 @@ def parse_point(geom: Any) -> Optional[tuple[float, float]]:
     return None
 
 
-def parse_line_start_end(geom: Any) -> Optional[tuple[tuple[float, float], tuple[float, float]]]:
-    """Return (start_lon_lat, end_lon_lat) of the first LineString in a MultiLineString."""
+def _to_python_coords(geom: Any) -> Optional[dict]:
+    """Normalize a the_geom (which may carry numpy arrays from parquet) into plain Python lists."""
     if not isinstance(geom, dict):
         return None
-    typ = geom.get("type")
     coords = geom.get("coordinates")
+    if coords is None:
+        return None
+    try:
+        # numpy arrays -> list-of-list-of-[lon,lat]
+        out: list = []
+        for part in coords:
+            ring: list = []
+            for pt in part:
+                ring.append([float(pt[0]), float(pt[1])])
+            out.append(ring)
+        return {"type": geom.get("type"), "coordinates": out}
+    except Exception:
+        return None
+
+
+def parse_line_start_end(geom: Any) -> Optional[tuple[tuple[float, float], tuple[float, float]]]:
+    """Return (start_lon_lat, end_lon_lat) of the first LineString in a MultiLineString."""
+    g = _to_python_coords(geom)
+    if g is None:
+        return None
+    typ = g.get("type")
+    coords = g.get("coordinates")
     if typ == "LineString" and isinstance(coords, list) and len(coords) >= 2:
         return ((float(coords[0][0]), float(coords[0][1])), (float(coords[-1][0]), float(coords[-1][1])))
     if typ == "MultiLineString" and isinstance(coords, list) and coords:
@@ -73,7 +108,7 @@ def segment_centroid(geom: Any) -> Optional[tuple[float, float]]:
         pt = parse_point(geom)
         if pt is None:
             return None
-        return se[0] if False else pt  # fallback to point
+        return pt
     (lon1, lat1), (lon2, lat2) = se
     return ((lon1 + lon2) / 2, (lat1 + lat2) / 2)
 
@@ -125,46 +160,79 @@ def build_segments(centerline: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+def _norm_street(s: str) -> str:
+    if not isinstance(s, str):
+        return ""
+    return re.sub(r"\s+", " ", re.sub(r"[^A-Z0-9 ]", "", s.upper())).strip()
+
+
+_STREET_ALIAS = {
+    "AVENUE": "AVE",
+    "AV": "AVE",
+    "STREET": "ST",
+    "ST": "ST",
+    "PLACE": "PL",
+    "PL": "PL",
+    "BOULEVARD": "BLVD",
+    "BLVD": "BLVD",
+    "DRIVE": "DR",
+    "DR": "DR",
+    "COURT": "CT",
+    "CT": "CT",
+    "LOUGH": "",
+}
+
+
+def _norm_alias(name: str) -> str:
+    """Normalize street name tokens: collapse whitespace, then map type tokens to canonical short forms
+    so e.g. '5 AVENUE', '5 AV', '5TH AVENUE' all map to a comparable key."""
+    toks = name.split()
+    out: list[str] = []
+    for t in toks:
+        up = t.upper()
+        # strip ordinal suffix: 5TH -> 5, 5TH-6TH -> keep
+        import re as _re
+        base = _re.sub(r"\b(TH|ND|RD|ST)\b", "", up) if len(up) > 2 and up[-2:].upper() in ("TH","ND","RD","ST") else up
+        canonical = _STREET_ALIAS.get(base, base)
+        if canonical:
+            out.append(canonical)
+    return " ".join(out)
+
+
 def snap_report_to_segment(
     report_lat: Optional[float],
     report_lon: Optional[float],
     report_street: str,
     segments: pd.DataFrame,
-    max_meters: float = 150.0,
+    max_meters: float = 500.0,
 ) -> Optional[dict[str, Any]]:
     """Snap a single 311 report to its nearest segment. Returns segment row dict or None.
 
     Priority:
     1. If report has lat/lon, haversine to each segment centroid; take nearest within max.
-    2. Else if report has a street name, match by normalized street name.
+    2. Else if report has a street name, match by alias-normalized street name.
     """
+    # If we have lat/lon, snap to the nearest segment by haversine distance
+    # to the segment CENTROID, with a wider tolerance (2km) since centerline
+    # centroids can be offset from the actual street (e.g. for 5th Ave reports
+    # near the east river, the nearest centroid may be a cross street).
     if report_lat is not None and report_lon is not None:
-        best = None
-        best_dist = float("inf")
-        for _, s in segments.iterrows():
-            d = haversine(report_lat, report_lon, s["centroid_lat"], s["centroid_lon"])
-            if d < best_dist:
-                best_dist = d
-                best = s
-        if best is not None and best_dist <= max_meters:
-            return best.to_dict()
+        dists = haversine_series(report_lat, report_lon, segments["centroid_lat"].values, segments["centroid_lon"].values)
+        idx = int(dists.argmin())
+        best_dist = float(dists[idx])
+        if best_dist <= 2000.0:
+            return segments.iloc[idx].to_dict()
         return None
-    # Name-based fallback: match street name tokens.
+    # Name-based fallback: match by alias-normalized street name.
     if not report_street:
         return None
-    r_tokens = set(re.sub(r"[^A-Z0-9 ]", "", report_street.upper()).split())
+    r_norm = _norm_alias(_norm_street(report_street))
+    if not r_norm:
+        return None
     best = None
-    best_overlap = 0
     for _, s in segments.iterrows():
-        s_tokens = set(s["streetName"].split())
-        if not s_tokens:
-            continue
-        overlap = len(r_tokens & s_tokens)
-        if overlap > best_overlap:
-            best_overlap = overlap
-            best = s
-    if best is not None and best_overlap >= 1:
-        return best.to_dict()
+        if _norm_alias(_norm_street(s["streetName"])) == r_norm:
+            return s.to_dict()
     return None
 
 

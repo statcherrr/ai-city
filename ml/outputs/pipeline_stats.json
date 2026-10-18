@@ -1,0 +1,36 @@
+{
+  "stages": {
+    "other": 457,
+    "test": 140,
+    "train": 1586,
+    "val": 122
+  },
+  "train_rows": 1586,
+  "train_dates": [
+    "2020-01-03",
+    "2023-12-28"
+  ],
+  "segments_in_train": 24,
+  "daily_mean": 2.11,
+  "daily_max": 11,
+  "daily_min": 1,
+  "daily_days": 751,
+  "date_span": [
+    "2020-01-03",
+    "2023-12-28"
+  ],
+  "val_rows": 122,
+  "test_rows": 140,
+  "val_dates": [
+    "2024-01-04",
+    "2024-06-28"
+  ],
+  "test_dates": [
+    "2024-07-01",
+    "2024-12-29"
+  ],
+  "missing_311_sample_rows": 5315,
+  "snapped_before_filter": 2305,
+  "segments_with_potholes_in_train": 24,
+  "note": "columns in snapped_311.parquet were swapped (street_name_311 held dates, pothole_date held street names); corrected here"
+}

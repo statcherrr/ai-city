@@ -9,3 +9,8 @@ ml/.venv/
 ml/data/raw/
 ml/outputs/*.parquet
 ml/outputs/*.joblib
+
+ml/.venv/
+ml/data/raw/
+ml/outputs/*.parquet
+ml/outputs/*.joblib
